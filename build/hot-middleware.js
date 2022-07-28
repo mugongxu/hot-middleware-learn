@@ -1,3 +1,13 @@
+var parse = require('url').parse;
+
+var pathMatch = function(url, path) {
+  try {
+    return parse(url).pathname === path;
+  } catch (e) {
+    return false;
+  }
+};
+
 module.exports = function(compiler, opts) {
   opts = opts || {};
   opts.path = opts.path || '/__webpack_hmr';
@@ -18,12 +28,18 @@ module.exports = function(compiler, opts) {
 
   function onDone(statsResult) {
     // 发送更新命令
-    publishStats('build', statsResult, eventStream);
+    publishStats('built', statsResult, eventStream);
   }
 
   var middleware = function(req, res, next) {
+    // 只有符合路径的才创建EventStream请求
+    if (!pathMatch(req.url, opts.path)) return next();
     // eventStream创建请求
     eventStream.handler(req, res);
+  }
+
+  middleware.publish = function(payload) {
+    eventStream.publish(payload);
   }
 
   return middleware;
@@ -59,13 +75,44 @@ function createEventStream() {
       });
     },
     publish: function(payload) {
+      console.log('编译成功：', payload.action);
       Object.keys(clients).forEach(function(id) {
-        clients[id].write('data: ' + JSON.stringify(payload) + '\n\\n');
+        console.log('开始发送-------', JSON.stringify(payload));
+        clients[id].write('data: ' + JSON.stringify(payload) + '\n\n');
       });
     }
   };
 }
 
 function publishStats(action, statsResult, eventStream, log) {
-  console.log(action, statsResult, eventStream, log);
+  var stats = statsResult.toJson({
+    all: false,
+    cached: true,
+    children: true,
+    modules: true,
+    timings: true,
+    hash: true,
+  });
+  var bundles = [stats];
+  if (stats.modules) bundles = [stats];
+  if (stats.children && stats.children.length) bundles = stats.children;
+
+  bundles.forEach(stat => {
+    var name = stat.name || '';
+
+    var map = {};
+    (stats.modules || []).forEach(module => {
+      map[module.id] = module.name;
+    });
+    
+    eventStream.publish({
+      name: name,
+      action: action,
+      time: stats.time,
+      hash: stats.hash,
+      warnings: stats.warnings || [],
+      errors: stats.errors || [],
+      modules: map,
+    });
+  });
 }
