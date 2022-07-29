@@ -1,3 +1,5 @@
+var { hotDownloadManifest } = require('./hot-replacement');
+
 if (!module.hot) {
   throw new Error('[HMR] Hot Module Replacement is disabled.');
 }
@@ -38,10 +40,14 @@ function upToDate(hash) {
 module.exports = function(hash, moduleMap, options) {
   var reload = options.reload;
   // hash值不同 && 该进程正在等待调用 check
-  console.log()
+  console.log(hash, moduleMap, options)
+  console.log(__webpack_require__.p);
   if (!upToDate(hash) && module.hot.status() == 'idle') {
     // 开始检测更新
     check();
+    hotDownloadManifest().then(update => {
+      console.log('update:', update);
+    });
   }
 
   function check() {
