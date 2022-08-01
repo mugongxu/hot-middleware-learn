@@ -5,7 +5,7 @@ function hotDownloadManifest() {
     }
     try {
       var request = new XMLHttpRequest();
-      var requestPath = `http://localhost:3000/${__webpack_hash__}.hot-update.json`;
+      var requestPath = `http://localhost:3000/app.${__webpack_hash__}.hot-update.json`;
       request.open("GET", requestPath, true);
 	  request.timeout = 10000;
 	  request.send(null);
@@ -36,6 +36,16 @@ function hotDownloadManifest() {
   });
 }
 
+function hotDownloadUpdateChunk(chunkId) {
+  var head = document.getElementsByTagName('head')[0];
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.charset = 'utf-8';
+  script.src = `http://localhost:3000/${chunkId}.${__webpack_hash__}.hot-update.js`;
+  head.appendChild(script);
+}
+
 module.exports = {
-  hotDownloadManifest: hotDownloadManifest
+  hotDownloadManifest: hotDownloadManifest,
+  hotDownloadUpdateChunk: hotDownloadUpdateChunk
 };

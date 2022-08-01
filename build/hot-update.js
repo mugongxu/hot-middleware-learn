@@ -1,4 +1,4 @@
-var { hotDownloadManifest } = require('./hot-replacement');
+var { hotDownloadManifest, hotDownloadUpdateChunk } = require('./hot-replacement');
 
 if (!module.hot) {
   throw new Error('[HMR] Hot Module Replacement is disabled.');
@@ -44,10 +44,15 @@ module.exports = function(hash, moduleMap, options) {
   console.log(__webpack_require__.p);
   if (!upToDate(hash) && module.hot.status() == 'idle') {
     // 开始检测更新
-    check();
     hotDownloadManifest().then(update => {
       console.log('update:', update);
+      let hotAvailableFilesMap = update.c || {};
+      Object.keys(hotAvailableFilesMap).forEach(chunkId => {
+        hotDownloadUpdateChunk(hotAvailableFilesMap[chunkId]);
+      });
     });
+    // 原方法
+    // check();
   }
 
   function check() {
